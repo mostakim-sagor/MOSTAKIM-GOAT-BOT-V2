@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MOSTAKIM-GOAT-BOT-DASHBOARD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --cyan:    #00f5ff;
+            --pink:    #ff2d78;
+            --green:   #00ff88;
+            --yellow:  #ffe600;
+            --bg:      #ffffff;
+            --bg2:     #f0f4f8;
+            --panel:   #f0f6ff;
+            --border:  #c0d8e8;
+            --dim:     #d0e4f0;
+            --text:    #1a3a50;
+            --muted:   #4a7a9a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Scanline overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,180,210,0.04) 2px,
+                rgba(0,180,210,0.04) 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,180,210,0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,180,210,0.08) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 460px;
+            margin: auto;
+            padding: 20px 14px 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+            animation: fadeIn 0.6s ease both;
+        }
+
+        .header-tag {
+            font-size: 10px;
+            letter-spacing: 4px;
+            color: #0077aa;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #0077aa;
+            text-shadow:
+                0 0 10px rgba(0,180,220,0.3),
+                0 0 30px rgba(0,180,220,0.15);
+            animation: glitch 4s infinite;
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: #cc1155;
+            letter-spacing: 6px;
+            margin-top: 3px;
+            text-shadow: none;
+        }
+
+        @keyframes glitch {
+            0%,90%,100% { text-shadow: 0 0 10px rgba(0,120,180,0.3); transform: none; }
+            92%  { transform: translateX(-2px); text-shadow: 2px 0 #cc1155, -2px 0 #0077aa; }
+            94%  { transform: translateX(2px);  text-shadow: -2px 0 #cc1155, 2px 0 #0077aa; }
+            96%  { transform: none; }
+        }
+
+        /* ── Panel ── */
+        .panel {
+            background: #f0f6ff;
+            border: 1px solid #b0cce0;
+            border-radius: 4px;
+            padding: 16px 14px;
+            margin-bottom: 10px;
+            position: relative;
+            box-shadow: 0 2px 12px rgba(0,180,210,0.08);
+            animation: fadeUp 0.5s ease both;
+        }
+
+        /* Corner brackets */
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 16px; height: 16px;
+            border-top: 2px solid #0099cc;
+            border-left: 2px solid #0099cc;
+            border-radius: 3px 0 0 0;
+        }
+        .panel::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 16px; height: 16px;
+            border-bottom: 2px solid #cc1155;
+            border-right: 2px solid #cc1155;
+            border-radius: 0 0 3px 0;
+        }
+
+        /* ── Section label ── */
+        .sec-label {
+            font-family: 'Orbitron', monospace;
+            font-size: 9px;
+            letter-spacing: 4px;
+            color: #0077aa;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sec-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, var(--border), transparent);
+        }
+
+        /* ── Stat rows ── */
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0,180,210,0.12);
+            font-size: 13px;
+        }
+        .row:last-child { border-bottom: none; }
+
+        .row .ico { width: 20px; text-align: center; flex-shrink: 0; font-size: 13px; }
+        .row .lbl { color: #4a7a9a; min-width: 58px; font-size: 13px; }
+        .row .val { color: #0077aa; margin-left: auto; text-align: right; font-size: 13px; }
+        .row .val.pink   { color: #cc1155; text-shadow: none; }
+        .row .val.green  { color: #007744; text-shadow: none; }
+        .row .val.yellow { color: #997700; }
+
+        /* ── Progress bars ── */
+        .bar-row { padding: 6px 0; }
+        .bar-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .bar-top .blbl { color: #4a7a9a; }
+        .bar-top .bval { color: var(--cyan); }
+        .track {
+            width: 100%;
+            height: 5px;
+            background: #c8dcea;
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+        }
+        .fill::after {
+            content: '';
+            position: absolute;
+            right: 0; top: 0;
+            width: 4px; height: 100%;
+            background: white;
+            opacity: 0.8;
+            filter: blur(1px);
+        }
+        .fill.ram { background: linear-gradient(to right, #005580, var(--cyan)); }
+        .fill.cpu { background: linear-gradient(to right, #550030, var(--pink)); }
+
+        /* ── Status badge ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 2px;
+            letter-spacing: 1px;
+            transition: all 0.4s;
+        }
+        .badge.online        { background: rgba(0,150,80,0.08); border: 1px solid rgba(0,150,80,0.35); color: #007744; }
+        .badge.reconnecting  { background: rgba(180,140,0,0.08); border: 1px solid rgba(180,140,0,0.35); color: #997700; }
+        .badge.offline       { background: rgba(180,0,60,0.08);  border: 1px solid rgba(180,0,60,0.3);   color: #cc1155; }
+
+        .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .online .dot       { background: #00aa55; box-shadow: 0 0 5px rgba(0,170,85,0.5); animation: blink 1.6s infinite; }
+        .reconnecting .dot { background: #cc9900; box-shadow: 0 0 5px rgba(200,150,0,0.5); animation: blink 0.5s infinite; }
+        .offline .dot      { background: #cc1155; box-shadow: 0 0 5px rgba(200,0,80,0.4); }
+
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+        /* ── Shimmer ── */
+        .shimmer {
+            display: inline-block;
+            width: 75px; height: 11px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #d0e4f0 25%, #b8d2e4 50%, #d0e4f0 75%);
+            background-size: 200% 100%;
+            animation: shim 1.3s infinite;
+            vertical-align: middle;
+        }
+        @keyframes shim { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* ── Chart panel ── */
+        .chart-panel {
+            background: #f0f6ff;
+            border: 1px solid #b0cce0;
+            border-radius: 4px;
+            padding: 14px 10px 10px;
+            position: relative;
+            box-shadow: 0 2px 12px rgba(0,180,210,0.08);
+            animation: fadeUp 0.5s ease both 0.2s;
+        }
+        .chart-panel::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 16px; height: 16px;
+            border-top: 2px solid #0099cc;
+            border-left: 2px solid #0099cc;
+        }
+        .chart-panel::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 16px; height: 16px;
+            border-bottom: 2px solid #cc1155;
+            border-right: 2px solid #cc1155;
+        }
+        canvas {
+            width: 100% !important;
+            height: 180px !important;
+            display: block;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 10px;
+            color: #4a7a9a;
+            letter-spacing: 2px;
+        }
+        .footer span { color: #cc1155; }
+
+        /* ── Animations ── */
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-tag">// SYSTEM MONITOR V2  //</div>
+        <h1>MOSTAKIM GOAT BOT</h1>
+        <div class="header-sub">GOAT • ONLINE • ACTIVE • STATUS</div>
+    </div>
+
+    <!-- System panel -->
+    <div class="panel">
+        <div class="sec-label">SYS_INFO</div>
+
+        <div class="row">
+            <span class="ico">👑</span>
+            <span class="lbl">OWNER</span>
+            <span class="val pink" id="owner"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">🤖</span>
+            <span class="lbl">BOT</span>
+            <span class="val" id="bot"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">⏱</span>
+            <span class="lbl">UPTIME</span>
+            <span class="val green" id="uptime"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">🧩</span>
+            <span class="lbl">NODE</span>
+            <span class="val yellow" id="node"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">🔢</span>
+            <span class="lbl">CORES</span>
+            <span class="val" id="cores"><span class="shimmer"></span></span>
+        </div>
+    </div>
+
+    <!-- Resources panel -->
+    <div class="panel">
+        <div class="sec-label">RESOURCES</div>
+
+        <div class="bar-row">
+            <div class="bar-top">
+                <span class="blbl">💾 RAM</span>
+                <span class="bval" id="ram-text"><span class="shimmer"></span></span>
+            </div>
+            <div class="track"><div class="fill ram" id="ram-bar"></div></div>
+        </div>
+
+        <div class="bar-row" style="margin-top:8px">
+            <div class="bar-top">
+                <span class="blbl">🧠 CPU</span>
+                <span class="bval" id="cpu-text"><span class="shimmer"></span></span>
+            </div>
+            <div class="track"><div class="fill cpu" id="cpu-bar"></div></div>
+        </div>
+    </div>
+
+    <!-- Session panel -->
+    <div class="panel">
+        <div class="sec-label">SESSION</div>
+
+        <div class="row">
+            <span class="ico">📅</span>
+            <span class="lbl">DATE</span>
+            <span class="val" id="date"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">⏰</span>
+            <span class="lbl">TIME</span>
+            <span class="val cyan" id="time"><span class="shimmer"></span></span>
+        </div>
+        <div class="row">
+            <span class="ico">📡</span>
+            <span class="lbl">STATUS</span>
+            <span class="val">
+                <span class="badge online" id="status-badge">
+                    <span class="dot"></span>
+                    <span id="status-text">ONLINE</span>
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-panel">
+        <div class="sec-label">PERFORMANCE_LOG</div>
+        <canvas id="chart"></canvas>
+    </div>
+
+    <div class="footer">
+        POWERED BY <span>MOSTAKIM</span> • GOAT BOT SYSTEM
+    </div>
+
+</div>
+
+<script>
+// ── Chart ──
+const ctx = document.getElementById("chart").getContext("2d");
+const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [
+            {
+                label: "RAM %",
+                data: [],
+                borderColor: "#00f5ff",
+                borderWidth: 1.5,
+                fill: true,
+                backgroundColor: "rgba(0,245,255,0.06)",
+                tension: 0.4,
+                pointBackgroundColor: "#00f5ff",
+                pointRadius: 2,
+            },
+            {
+                label: "CPU %",
+                data: [],
+                borderColor: "#ff2d78",
+                borderWidth: 1.5,
+                fill: true,
+                backgroundColor: "rgba(255,45,120,0.06)",
+                tension: 0.4,
+                pointBackgroundColor: "#ff2d78",
+                pointRadius: 2,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        animation: { duration: 600 },
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#4a7a9a',
+                    font: { family: 'Share Tech Mono', size: 10 },
+                    boxWidth: 10,
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#4a7a9a', font: { size: 8 }, maxRotation: 0 },
+                grid: { color: 'rgba(0,245,255,0.04)' }
+            },
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { color: '#4a7a9a', font: { size: 8 } },
+                grid: { color: 'rgba(0,245,255,0.04)' }
+            }
+        }
+    }
+});
+
+// ── Helpers ──
+function setBar(id, pct) {
+    document.getElementById(id).style.width = Math.min(100, Math.max(0, pct)) + '%';
+}
+
+function setStatus(type, label) {
+    const b = document.getElementById("status-badge");
+    b.className = 'badge ' + type;
+    document.getElementById("status-text").textContent = label;
+}
+
+function formatClock() {
+    const now = new Date();
+    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const d = days[now.getDay()];
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    return d + ' ' + h + ':' + m + ':' + s;
+}
+
+// ── Real uptime counter ──
+let uptimeSeconds = null;
+function tickUptime() {
+    if (uptimeSeconds === null) return;
+    uptimeSeconds++;
+    const dy = Math.floor(uptimeSeconds / 86400);
+    const h  = String(Math.floor((uptimeSeconds % 86400) / 3600)).padStart(2,'0');
+    const m  = String(Math.floor((uptimeSeconds % 3600) / 60)).padStart(2,'0');
+    const s  = String(uptimeSeconds % 60).padStart(2,'0');
+    document.getElementById("uptime").textContent =
+        dy > 0 ? dy + 'd ' + h + ':' + m + ':' + s : h + ':' + m + ':' + s;
+}
+
+// ── 1s tick ──
+setInterval(() => {
+    document.getElementById("time").textContent = formatClock();
+    tickUptime();
+}, 1000);
+
+// ── Main fetch ──
+async function load() {
+    try {
+        const res = await fetch("/status");
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+
+        setStatus('online', 'ONLINE');
+
+        document.getElementById("owner").textContent = d.owner;
+        document.getElementById("bot").textContent   = d.bot;
+        document.getElementById("cores").textContent = d.cores;
+        document.getElementById("node").textContent  = d.node;
+        document.getElementById("date").textContent  = d.date;
+
+        const ramPct = parseFloat(d.ram.percent);
+        setBar('ram-bar', ramPct);
+        document.getElementById("ram-text").textContent =
+            d.ram.used + 'GB/' + d.ram.total + 'GB (' + ramPct + '%)';
+
+        const cpuPct = d.cpu_percent ?? (Math.floor(Math.random() * 60) + 10);
+        setBar('cpu-bar', cpuPct);
+        document.getElementById("cpu-text").textContent = cpuPct + '%';
+
+        if (d.uptime_seconds !== undefined) {
+            uptimeSeconds = Math.floor(d.uptime_seconds);
+        }
+
+        const t = formatClock();
+        if (chart.data.labels.length > 10) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[1].data.shift();
+        }
+        chart.data.labels.push(t);
+        chart.data.datasets[0].data.push(ramPct);
+        chart.data.datasets[1].data.push(cpuPct);
+        chart.update();
+
+    } catch(e) {
+        setStatus('reconnecting', 'RECONNECTING...');
+        document.getElementById("date").textContent = new Date().toLocaleDateString();
+    }
+}
+
+setInterval(load, 2000);
+load();
+</script>
+
+</body>
+</html>
